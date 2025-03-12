@@ -62,6 +62,24 @@ export function RoutineProvider({ children }) {
     }
   };
 
+  // 🔹 Aggiunge una nuova attività
+  const addTask = async (time, activity) => {
+    if (!userId) return;
+    const today = new Date().toISOString().split("T")[0];
+
+    const newTask = {
+      id: `custom-${Date.now()}`, // ID univoco
+      activity,
+      completed: false,
+      createdAt: today,
+      time, // 🔹 Aggiunge anche l'ora della nuova attività
+    };
+
+    const updatedTasks = [...tasks, newTask];
+    setTasks(updatedTasks);
+    await saveTasks(updatedTasks);
+  };
+
   // 🔹 Marca un'attività come completata
   const toggleTask = async (taskId) => {
     const updatedTasks = tasks.map((task) =>
@@ -72,7 +90,7 @@ export function RoutineProvider({ children }) {
   };
 
   return (
-    <RoutineContext.Provider value={{ tasks, toggleTask }}>
+    <RoutineContext.Provider value={{ tasks, toggleTask, addTask }}>
       {children}
     </RoutineContext.Provider>
   );

@@ -1,13 +1,25 @@
 import { usePomodoro } from "../context/PomodoroContext";
 
 export default function PomodoroTimer() {
-  const { timeLeft, isRunning, sessionType, setIsRunning } = usePomodoro();
+  const { timeLeft, isRunning, sessionType, setIsRunning, startTimestamp } = usePomodoro();
 
   const formatTime = (seconds) => {
     const min = Math.floor(seconds / 60);
     const sec = seconds % 60;
     return `${min}:${sec < 10 ? "0" : ""}${sec}`;
   };
+
+  function getTimeFromTimestamp(timestamp) {
+    const date = new Date(timestamp);
+    
+    // Recupera ore, minuti e secondi
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+  
+    // Ritorna una stringa nel formato "HH:MM:SS"
+    return `${hours}:${minutes}:${seconds}`;
+  }
 
   return (
     <div className="w-full max-w-md bg-white p-6 rounded-lg shadow-lg mt-6 text-center">
@@ -21,6 +33,7 @@ export default function PomodoroTimer() {
       >
         {isRunning ? "⏸ Pausa" : "▶ Riprendi"}
       </button>
+      <p>{getTimeFromTimestamp(startTimestamp)}</p>
     </div>
   );
 }

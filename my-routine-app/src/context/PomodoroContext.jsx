@@ -20,11 +20,17 @@ export function PomodoroProvider({ children }) {
   const [isRunning, setIsRunning] = useState(true);
   const [sessionType, setSessionType] = useState("Lavoro");
   const [cyclesCompleted, setCyclesCompleted] = useState(0);
+  const [startTimestamp, setStartTimestamp] = useState(null);
 
   useEffect(() => {
     if (!isRunning) return;
 
     console.log("Countdown iniziato!");
+    const now = new Date().toISOString();
+    setStartTimestamp(now);
+    localStorage.setItem("pomodoroStartTimestamp", now); // 🔹 Salva il timestamp in localStorage
+    console.log(`⏳ Timer avviato alle: ${now}`);
+
     playStartSound();  // 🔊 Suono all'inizio del timer
 
     const timer = setInterval(() => {
@@ -88,7 +94,7 @@ export function PomodoroProvider({ children }) {
   }, []);
 
   return (
-    <PomodoroContext.Provider value={{ timeLeft, isRunning, sessionType, setIsRunning }}>
+    <PomodoroContext.Provider value={{ timeLeft, isRunning, sessionType, setIsRunning, startTimestamp }}>
       {children}
     </PomodoroContext.Provider>
   );
