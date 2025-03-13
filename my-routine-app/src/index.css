@@ -22,6 +22,17 @@ a {
   color: #ffffff;
   text-decoration: inherit;
 }
+
+#RoutineDashboard a {
+  color: green !important;
+  text-decoration: underline;
+
+}
+
+#RoutineDashboard a:hover {
+  color: red;
+}
+
 a:hover {
   color: #fa8435;
   text-decoration: none !important;

@@ -86,15 +86,15 @@ export function PomodoroProvider({ children }) {
   };
 
   // 🔹 Avvia il timer
-  const startTimer = () => {
+  const startTimer = (duration = WORK_TIME) => {
     const now = Date.now();
     setStartTimestamp(now);
     setIsRunning(true);
-    setTimeLeft(WORK_TIME);
-
+    setTimeLeft(duration);
+  
     localStorage.setItem("pomodoroStartTimestamp", now.toString());
     playStartSound(); // 🔊 Suono all'avvio del timer
-  };
+  };  
 
   // 🔹 Resetta il timer e lo riavvia
   const resetTimer = () => {
@@ -106,27 +106,44 @@ export function PomodoroProvider({ children }) {
   const handleSessionEnd = () => {
     setStartTimestamp(null);
     localStorage.removeItem("pomodoroStartTimestamp");
-    
+  
     playEndSound(); // 🔊 Suono alla fine del timer
-
-    if (sessionType === "Lavoro") {
-      setCyclesCompleted((prev) => prev + 1);
-      setSessionType(cyclesCompleted + 1 === CYCLES_BEFORE_LONG_BREAK ? "Pausa lunga" : "Pausa");
-      setTimeLeft(cyclesCompleted + 1 === CYCLES_BEFORE_LONG_BREAK ? LONG_BREAK : SHORT_BREAK);
-    } else {
-      setSessionType("Lavoro");
-      setTimeLeft(WORK_TIME);
-    }
-
-    if (Notification.permission === "granted") {
-      new Notification(`⏳ ${sessionType === "Lavoro" ? "Pausa" : "Lavoro"} iniziato!`);
-    }
-
-    startTimer();
+  
+    setCyclesCompleted((prevCycles) => {
+      const newCyclesCompleted = prevCycles + 1;
+  
+      let nextSessionType;
+      let nextDuration;
+  
+      setSessionType((prevType) => {
+        if (prevType === "Lavoro") {
+          nextSessionType = newCyclesCompleted % CYCLES_BEFORE_LONG_BREAK === 0 ? "Pausa lunga" : "Pausa";
+          nextDuration = newCyclesCompleted % CYCLES_BEFORE_LONG_BREAK === 0 ? LONG_BREAK : SHORT_BREAK;
+        } else {
+          nextSessionType = "Lavoro";
+          nextDuration = WORK_TIME;
+        }
+  
+        // 🔹 Log per debug
+        console.log(`🔄 Cambio sessione: ${prevType} → ${nextSessionType} | Durata: ${nextDuration} sec`);
+  
+        startTimer(nextDuration); // ✅ Ora avvia con il valore corretto
+  
+        return nextSessionType;
+      });
+  
+      if (Notification.permission === "granted") {
+        new Notification(`⏳ ${nextSessionType} iniziato!`);
+      }
+  
+      return newCyclesCompleted;
+    });
   };
+  
+  
 
   return (
-    <PomodoroContext.Provider value={{ timeLeft, isRunning, sessionType, setIsRunning, startTimestamp, startTimer, resetTimer }}>
+    <PomodoroContext.Provider value={{ timeLeft, isRunning, sessionType, cyclesCompleted, setIsRunning, startTimestamp, startTimer, resetTimer }}>
       {children}
     </PomodoroContext.Provider>
   );

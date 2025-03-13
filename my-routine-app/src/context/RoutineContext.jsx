@@ -15,6 +15,7 @@ export function RoutineProvider({ children }) {
       { id: `task1-${today}`, activity: "Prendere pappa reale", completed: false, createdAt: today },
       { id: `task2-${today}`, activity: "Riscaldamento", completed: false, createdAt: today },
       { id: `task3-${today}`, activity: "Allenamento 30'", completed: false, createdAt: today },
+      { id: `task4-${today}`, activity: "Leggere Email", completed: false, createdAt: today },
     ];
   };
 
@@ -34,12 +35,12 @@ export function RoutineProvider({ children }) {
         const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
 
         let savedTasks = []; // Inizializziamo un array vuoto
-
+        let filteredTasks = []
         if (docSnap.exists() && docSnap.data().tasks) {
           savedTasks = Array.isArray(docSnap.data().tasks) ? docSnap.data().tasks : [];
           const today = getTodayDate();
           // 🔹 Filtra: Rimuove le attività completate che sono più vecchie di oggi
-          const filteredTasks = savedTasks.filter(task => {
+            filteredTasks = savedTasks.filter(task => {
             const taskDate = task.createdAt;
             const isOld = taskDate < today;
             return !(isOld && task.completed);
@@ -54,14 +55,16 @@ export function RoutineProvider({ children }) {
         }
 
         // 🔹 Controlla se esiste già un'attività per oggi
-        const alreadyExists = filteredTasks.some(task => task.createdAt === today);
-
+        const alreadyExists = filteredTasks.some(task => 
+          String(task.createdAt) === today // 🔹 Confronto più sicuro
+        );
+        
         if (!alreadyExists) {
           const updatedTasks = [...filteredTasks, ...getDefaultTasks()];
           setTasks(updatedTasks); 
-          await setDoc(userRef, { tasks: updatedTasks });
+          setTimeout(() => saveTasks(updatedTasks), 50); // 🔹 Ritardo per assicurare il sync con React
         } else {
-          setTasks([...tasks, filteredTasks]);// Se esistono, carichiamo quelle salvate
+          setTasks(filteredTasks);// Se esistono, carichiamo quelle salvate
         }
       } catch (error) {
         console.error("Errore nel caricamento delle attività:", error);
@@ -96,7 +99,7 @@ export function RoutineProvider({ children }) {
 
     const updatedTasks = [...tasks, newTask];
     setTasks(updatedTasks);
-    await saveTasks(updatedTasks);
+    setTimeout(() => saveTasks([...tasks, newTask]), 50);
   };
 
   // 🔹 Marca un'attività come completata
