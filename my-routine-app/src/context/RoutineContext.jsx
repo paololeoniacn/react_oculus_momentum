@@ -18,6 +18,11 @@ export function RoutineProvider({ children }) {
     ];
   };
 
+  // 🔹 Funzione per ottenere la data di oggi in formato YYYY-MM-DD
+  const getTodayDate = () => {
+    return new Date().toISOString().split("T")[0];
+  };
+
   // 🔹 Controlla se esistono già le attività di oggi
   useEffect(() => {
     if (!userId) return;
@@ -32,17 +37,31 @@ export function RoutineProvider({ children }) {
 
         if (docSnap.exists() && docSnap.data().tasks) {
           savedTasks = Array.isArray(docSnap.data().tasks) ? docSnap.data().tasks : [];
+          const today = getTodayDate();
+          // 🔹 Filtra: Rimuove le attività completate che sono più vecchie di oggi
+          const filteredTasks = savedTasks.filter(task => {
+            const taskDate = task.createdAt;
+            const isOld = taskDate < today;
+            return !(isOld && task.completed);
+          });
+
+          setTasks(filteredTasks);
+
+          // 🔹 Se ci sono stati cambiamenti, aggiorniamo Firestore
+          if (filteredTasks.length !== savedTasks.length) {
+            await setDoc(userRef, { tasks: filteredTasks });
+          }
         }
 
         // 🔹 Controlla se esiste già un'attività per oggi
-        const alreadyExists = savedTasks.some(task => task.createdAt === today);
+        const alreadyExists = filteredTasks.some(task => task.createdAt === today);
 
         if (!alreadyExists) {
-          const updatedTasks = [...savedTasks, ...getDefaultTasks()];
-          setTasks(updatedTasks);
+          const updatedTasks = [...filteredTasks, ...getDefaultTasks()];
+          setTasks(updatedTasks); 
           await setDoc(userRef, { tasks: updatedTasks });
         } else {
-          setTasks(savedTasks); // Se esistono, carichiamo quelle salvate
+          setTasks([...tasks, filteredTasks]);// Se esistono, carichiamo quelle salvate
         }
       } catch (error) {
         console.error("Errore nel caricamento delle attività:", error);

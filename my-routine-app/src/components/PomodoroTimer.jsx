@@ -1,7 +1,7 @@
 import { usePomodoro } from "../context/PomodoroContext";
 
 export default function PomodoroTimer() {
-  const { timeLeft, isRunning, sessionType, setIsRunning, startTimestamp } = usePomodoro();
+  const { timeLeft, isRunning, sessionType, setIsRunning, startTimestamp, startTimer, resetTimer } = usePomodoro();
 
   const formatTime = (seconds) => {
     const min = Math.floor(seconds / 60);
@@ -10,7 +10,9 @@ export default function PomodoroTimer() {
   };
 
   function getTimeFromTimestamp(timestamp) {
-    const date = new Date(timestamp);
+    if (!timestamp) return "N/A"; // 🔹 Evita errori se il timestamp è null
+
+    const date = new Date(parseInt(timestamp));
     
     // Recupera ore, minuti e secondi
     const hours = String(date.getHours()).padStart(2, '0');
@@ -27,13 +29,19 @@ export default function PomodoroTimer() {
       <p className={`text-2xl font-bold ${sessionType === "Lavoro" ? "text-red-500" : "text-green-500"}`}>
         {sessionType} - {formatTime(timeLeft)}
       </p>
-      <button
+      {/* <button
         onClick={() => setIsRunning(!isRunning)}
         className="mt-4 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition"
       >
         {isRunning ? "⏸ Pausa" : "▶ Riprendi"}
-      </button>
-      <p>{getTimeFromTimestamp(startTimestamp)}</p>
+      </button> */}
+      <button
+          onClick={resetTimer}
+          className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition"
+        >
+          🔄 Reset
+        </button>
+      <p>⏱ Iniziato alle: {getTimeFromTimestamp(startTimestamp)}</p>
     </div>
   );
 }

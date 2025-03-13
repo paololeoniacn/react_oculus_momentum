@@ -17,37 +17,51 @@ export function PomodoroProvider({ children }) {
   const CYCLES_BEFORE_LONG_BREAK = 4;
 
   const [timeLeft, setTimeLeft] = useState(WORK_TIME);
-  const [isRunning, setIsRunning] = useState(true);
+  const [isRunning, setIsRunning] = useState(false);
   const [sessionType, setSessionType] = useState("Lavoro");
   const [cyclesCompleted, setCyclesCompleted] = useState(0);
   const [startTimestamp, setStartTimestamp] = useState(null);
 
+  // 🔹 Recupera lo stato salvato su localStorage all'avvio
   useEffect(() => {
-    if (!isRunning) return;
+    const savedTimestamp = localStorage.getItem("pomodoroStartTimestamp");
 
-    console.log("Countdown iniziato!");
-    const now = new Date().toISOString();
-    setStartTimestamp(now);
-    localStorage.setItem("pomodoroStartTimestamp", now); // 🔹 Salva il timestamp in localStorage
-    console.log(`⏳ Timer avviato alle: ${now}`);
+    if (savedTimestamp) {
+      const now = Date.now();
+      const elapsed = Math.floor((now - parseInt(savedTimestamp)) / 1000);
+      let remainingTime = WORK_TIME - elapsed;
 
-    playStartSound();  // 🔊 Suono all'inizio del timer
+      if (remainingTime <= 0) {
+        handleSessionEnd();
+      } else {
+        setTimeLeft(remainingTime);
+        setIsRunning(true);
+        setStartTimestamp(parseInt(savedTimestamp));
+      }
+    }
+  }, []);
 
-    const timer = setInterval(() => {
-      setTimeLeft((prevTime) => {
-        //console.log(prevTime);
-        
-        if (prevTime === 0) {
-          playEndSound();  // 🔊 Suono alla fine del timer
-          handleSessionEnd();
-          return sessionType === "Lavoro" ? SHORT_BREAK : WORK_TIME;
-        }
-        return prevTime - 1;
-      });
-    }, 1000);
+  // 🔹 Aggiorna `timeLeft` ogni secondo SENZA usare `setInterval`
+  useEffect(() => {
+    if (!isRunning || !startTimestamp) return;
 
-    return () => clearInterval(timer);
-  }, [isRunning, sessionType]);
+    const updateTimer = () => {
+      const now = Date.now();
+      const elapsed = Math.floor((now - startTimestamp) / 1000);
+      const remainingTime = Math.max(WORK_TIME - elapsed, 0);
+
+      setTimeLeft(remainingTime);
+
+      if (remainingTime <= 0) {
+        handleSessionEnd();
+      }
+    };
+
+    // 🔹 Chiama `updateTimer` ogni secondo
+    const interval = setInterval(updateTimer, 1000);
+
+    return () => clearInterval(interval);
+  }, [isRunning, startTimestamp]);
 
   // 🔊 Suono all'inizio del timer (tono acuto breve)
   const playStartSound = () => {
@@ -60,8 +74,8 @@ export function PomodoroProvider({ children }) {
     oscillator.stop(context.currentTime + 0.2);
   };
 
-  // 🔊 Suono alla fine del timer (tono grave più lungo)
-  const playEndSound = () => {
+   // 🔊 Suono alla fine del timer (tono grave più lungo)
+   const playEndSound = () => {
     const context = new (window.AudioContext || window.webkitAudioContext)();
     const oscillator = context.createOscillator();
     oscillator.type = "sine";
@@ -71,7 +85,30 @@ export function PomodoroProvider({ children }) {
     oscillator.stop(context.currentTime + 0.5);
   };
 
+  // 🔹 Avvia il timer
+  const startTimer = () => {
+    const now = Date.now();
+    setStartTimestamp(now);
+    setIsRunning(true);
+    setTimeLeft(WORK_TIME);
+
+    localStorage.setItem("pomodoroStartTimestamp", now.toString());
+    playStartSound(); // 🔊 Suono all'avvio del timer
+  };
+
+  // 🔹 Resetta il timer e lo riavvia
+  const resetTimer = () => {
+    localStorage.removeItem("pomodoroStartTimestamp");
+    startTimer();
+  };
+
+  // 🔹 Gestisce il cambio di sessione al termine del timer
   const handleSessionEnd = () => {
+    setStartTimestamp(null);
+    localStorage.removeItem("pomodoroStartTimestamp");
+    
+    playEndSound(); // 🔊 Suono alla fine del timer
+
     if (sessionType === "Lavoro") {
       setCyclesCompleted((prev) => prev + 1);
       setSessionType(cyclesCompleted + 1 === CYCLES_BEFORE_LONG_BREAK ? "Pausa lunga" : "Pausa");
@@ -81,20 +118,15 @@ export function PomodoroProvider({ children }) {
       setTimeLeft(WORK_TIME);
     }
 
-    // Notifica quando cambia sessione
     if (Notification.permission === "granted") {
       new Notification(`⏳ ${sessionType === "Lavoro" ? "Pausa" : "Lavoro"} iniziato!`);
     }
+
+    startTimer();
   };
 
-  useEffect(() => {
-    if (Notification.permission !== "granted") {
-      Notification.requestPermission();
-    }
-  }, []);
-
   return (
-    <PomodoroContext.Provider value={{ timeLeft, isRunning, sessionType, setIsRunning, startTimestamp }}>
+    <PomodoroContext.Provider value={{ timeLeft, isRunning, sessionType, setIsRunning, startTimestamp, startTimer, resetTimer }}>
       {children}
     </PomodoroContext.Provider>
   );
